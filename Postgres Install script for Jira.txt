@@ -1,0 +1,46 @@
+#!/bin/bash
+# ================================================================= #
+# This script is used to install Jira application with an external  #
+# Postgres Database.                                                #
+# Author:  Erica Atanga -                                           #
+# Date: 08/12/2021                                                  #
+# ================================================================= #
+echo "Downloading Postgres repo RPM"
+sudo yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+
+# ----------------------------------------------------------------- #
+#             Installing the postgresql11 server                    #
+# ----------------------------------------------------------------- #
+echo "Installing postgresql 11 server"
+sudo yum install -y postgresql11-server
+sudo /usr/pgsql-11/bin/postgresql-11-setup initdb
+sudo systemctl enable postgresql-11
+sudo systemctl start postgresql-11
+
+# ----------------------------------------------------------------- #
+#         Open firewall for the postgresql Database                 #
+# ----------------------------------------------------------------- #
+echo "Opening ports 5432 and 8080 for postgresql11 and Jira"
+systemctl enable firewalld
+systemctl start firewalld
+firewall-cmd --permanent --zone=public --add-port=5432/tcp
+firewall-cmd --permanent --zone=public --add-port=5432/udp
+firewall-cmd --permanent --zone=public --add-port=8080/tcp
+firewall-cmd --permanent --zone=public --add-port=8005/tcp
+firewall-cmd --reload
+
+# ----------------------------------------------------------------- #
+#              Download Jira Software version 8.12.2                #
+# ----------------------------------------------------------------- #
+if [ -d /root/jira ]
+then
+  echo "Directory already exists! Nothing to do here"
+else
+    echo "Creating directory /root/jira"
+    mkdir /root/jira
+fi
+
+cd /root/jira
+sudo yum install -y wget
+wget https://www.atlassian.com/software/jira/downloads/binary/atlassian-jira-software-8.12.2-x64.bin
+chmod +x atlassian-jira-software-8.12.2-x64.bin
