@@ -1,0 +1,107 @@
+Scenario 1
+A Partner is having an issue accessing a system (Linux/Windows). They claim everything
+worked yesterday and today it quit working.
+
+Requirements
+• Provide a scripted/automated means of checking the system(s) for connectivity
+Answer:
+##In this case we can Use the Ansible ping module to check connectivity on systems Linux/Windows
+
+• Provide at least 2 solutions for validating connectivity/access.
+Answer:
+##ping $ipaddress
+##telnet $destinationIP $PORT
+##nslookup redhat.com To quickly check the name resolution
+
+• Outline all steps and the progression of the steps.
+#yum install Install ansible
+#yum install python-pip
+#pip install "pywinrm>=0.3.0"
+#rm -rf /etc/ansible/hosts
+#vim /etc/ansible/hosts
+[windows-servers]
+ip
+
+[windows-servers:vars]
+ansible_user=ansible_username
+ansible_password=password_ansible_user
+ansible_connection=winrm
+ansible_winrm_server_cert_validation=ignore
+
+[linux-servers:vars]
+ansible_connection=ssh
+ansible_ssh_user=ansible_username
+ansible_ssh_pass=password_ansible_user
+ansible_python_interpreter='/usr/bin/env python3'
+ansible_become_method=sudo
+#wq!
+#ansible windows-server -m win_ping
+#ansible linux-servers  -m ping
+###on the windows machine you will need to have the required packages 
+##see if you have choco on the windows server, If not install run windows powershell [choco], 
+your windows machines must have the necessary ansible packages installed then a ping will work.
+ you can also add in the playbook for ansible to install chocolatey for you. 
+
+• List tools and their usages for determining the resolution.
+###Ansible and PingInfo help with server connectivity {windows,Linux, AWS etc)
+ 
+Scenario 2
+A partner is requesting that you install software on various servers. They have a mix between
+Linux and Windows with each system getting a different version of the software.
+
+Requirements
+
+• Provide an automated method for installing the software.
+Answer
+###Ansible
+• The automation will need to be usable against both OS types at the same time.
+###Yes
+• The automation should validate/verify the software is already installed and update as
+necessary if it is.
+• The software should automatically start on system boot and should be immediately
+available after the installation.
+Answer:
+###Taking into consideration that Ansible was installed and host file configured as seen above,
+we can run the following playbook against both Windows and Linux hosts mentioned in Host file.
+See playbook
+
+---
+- hosts: all
+  become: true
+  tasks:
+ - name: Installing Apache MSI
+  hosts: win
+  tasks:
+    - name: Download the Apache installer
+      win_get_url:
+        url: https://archive.apache.org/dist/httpd/binaries/win32/httpd-2.2.25-win32-x86-no_ssl.msi
+        dest: C:\ansible_examples\httpd-2.2.25-win32-x86-no_ssl.msi
+
+    - name: Install MSI
+      win_package:
+        path: C:\ansible_examples\httpd-2.2.25-win32-x86-no_ssl.msi
+        arguments:
+          - /install
+          - /passive
+          - /norestart 
+		when: ansible_distribution == "windows"
+	
+  - name: Install apache packages 
+    yum:
+      name: httpd
+      state: present
+  - name: ensure httpd is running
+    service:
+      name: httpd 
+      state: started
+  - name: Open port 80 for http access
+    firewalld:
+      service: http
+      permanent: true
+      state: enabled
+  - name: Restart the firewalld service to load in the firewall changes
+    service: 
+      name: firewalld 
+      state: restarted
+ 
+ 
